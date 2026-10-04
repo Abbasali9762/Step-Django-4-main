@@ -1,0 +1,20 @@
+{# [DƏRS 8] bir postun kartı — siyahı, kateqoriya və müəllif səhifələrində təkrar istifadə olunur #}
+{# Bu faylı {% include %} edən template-də "post" dəyişəni olmalıdır #}
+<article class="card">
+  {# [EV 9] tapşırıq 5 #}
+  {% if post.is_featured %}<p class="featured">★ Seçilmiş</p>{% endif %}
+  
+  {% if post.header_image %}
+    <img id="post_header_img" src="{{ post.header_image.url }}" alt="{{ post.title }}" />
+  {% endif %}
+  <p class="meta">
+    <a href="{% url 'blog:category_detail' post.category.slug %}" class="badge">{{ post.category.name }}</a>
+    {{ post.created_at|date:"d.m.Y" }}
+  </p>
+  <h2><a href="{% url 'blog:post_detail' post.id %}">{{ post.title }}</a></h2>
+  <p>{{ post.content|truncatewords:12 }}</p>
+  {# [EV 8] tapşırıq 5 — müəllif adı link oldu #}
+  <p class="author">
+    <a href="{% url 'blog:author_posts' post.author %}">@{{ post.author }}</a>
+  </p>
+</article>

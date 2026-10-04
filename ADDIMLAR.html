@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="az"><head><meta charset="utf-8"><title>Dərs 9 — Addım-addım (müəllim üçün)</title>
+<link rel="stylesheet" href="../guide.css">
+</head><body>
+<div class="head">
+  <div class="l"><div class="kick">Yalnız müəllim üçün · arxa monitor</div>
+  <h1>Dərs 9 — layihəni addım-addım yaz</h1></div>
+  <div class="r"><b>Model, migration, ORM, admin</b><br>models · migrate · admin · shell<br>Slaydlar: lesson-09.pdf (40)</div>
+</div>
+<p class="legend">Başlanğıc — Dərs 8-in sonundakı layihə. Hər addımda faylın həmin andakı vəziyyəti göstərilir.
+<span>Yaşıl sətirlər</span> — bu addımda <b>yeni yazdığın</b> sətirlərdir;
+<span style="background:#fde8e6;border-color:#e23b2e;text-decoration:line-through">qırmızı</span> — silinən/əvəz olunan sətir;
+ağ sətirlər artıq fayldadır, <code>...</code> — dəyişməyən hissə. Qara bloklar — terminal (çıxışlar real yoxlanılıb).
+Sağ küncdə — təxmini vaxt və slayd nömrəsi.</p>
+<h2 class="part">0 · Dərsdən əvvəl (evdə, 10 dəq)</h2><div class="step"><h3><span class="n">1</span>Hazırlıq<span class="meta">dərsdən əvvəl</span></h3><p><b>1.</b> Dərs 8-in sonundakı layihəni aç (öz <code>step-blog</code>-un və ya <code>project/django/lesson-08/</code>-in surəti). <code>blog/data.py</code> hələ yerindədir — bu gün <b>silinmir</b>.</p><pre class="term">cd step-blog
+git pull
+source .venv/bin/activate
+python manage.py runserver   <span class="c">  # Dərs 8-in saytı açılmalıdır</span></pre><p><b>2.</b> Qovluqda <code>db.sqlite3</code> varsa, <b>sil</b>. Baza boş başlamalıdır — yoxsa postların id-ləri <code>data.py</code>-dakı id-lərlə üst-üstə düşməz (aşağıda addım 8-ə bax).</p><p><b>3.</b> Superuser üçün sadə ad/parol fikirləş (ekranda yazacaqsan): məs. <code>admin</code> / <code>step12345</code>.</p><div class="warn"><b>⚠</b> <b>Ehtiyat plan:</b> <code>python manage.py loaddata demo</code> — <code>project/django/lesson-09/blog/fixtures/demo.json</code> (5 post + 3 kateqoriya). Bu fayl <b>kateqoriyaları da</b> saxlayır, ona görə yalnız <code>0002_category</code> migration-u olandan sonra işləyir. Yəni ancaq praktikadan sonra, öz bazanda. Tələbəyə göstərmə.</div></div><h2 class="part">I hissə · Slayd + canlı kod (0:00 – 1:30)</h2><div class="step"><h3><span class="n">2</span>Giriş və nəzəriyyə — kod yoxdur<span class="meta">0:00–0:20 · slayd 1–11</span></h3><p>Slayd 2: keçən dərsdən 5 sual + ev tapşırığına baxış. Slayd 3: “Yeni post yazmaq üçün nə etməliyik?” → <code>data.py</code>-ı açıb kod dəyişmək. “Redaktor Python bilmir.” → baza + admin.</p><p>Slayd 6–8: baza = Excel cədvəli, SQLite = bir fayl. Lövhədə üç sütun: <b>class ↔ cədvəl · atribut ↔ sütun · obyekt ↔ sətir</b>.</p><div class="say"><b>De:</b> “Dərs 3-də <code>Telebe</code> obyektləri yaddaşda yaşayırdı, proqram bağlananda ölürdü. İndi class eynidir — obyektlər bazada yaşayır.”</div><p>Slayd 10–11: <code>Film</code> nümunəsi və field tipləri — yalnız slayd, kod yazmırsan.</p></div><div class="step"><h3><span class="n">3</span>Post modeli<span class="meta">0:20 · slayd 12–15</span></h3><div class="file">blog/models.py</div><pre style="font-size:6.4pt">from django.db import models
+
+<span class="del"># Create your models here.</span><span class="add"><span class="c"># Model = cədvəl, obyekt = sətir, sahə = sütun.</span></span><span class="add"><span class="c"># Model dəyişəndən sonra HƏMİŞƏ:  makemigrations  →  migrate</span></span><span class="add"> </span><span class="add"> </span><span class="add"><span class="c"># [DƏRS 9] müəllim yazır</span></span><span class="add">class Post(models.Model):</span><span class="add">    title = models.CharField(max_length=200)                    <span class="c">  # qısa mətn — max_length = maksimum simvol sayı</span></span><span class="add">    author = models.CharField(max_length=50)                    <span class="c">  # hələlik ad; Dərs 12-də User olacaq</span></span><span class="add">    category = models.CharField(max_length=50)                  <span class="c">  # hələlik slug; Dərs 10-da ForeignKey olacaq</span></span><span class="add">    content = models.TextField()                                <span class="c">  # uzun mətn — limitsiz</span></span><span class="add">    is_published = models.BooleanField(default=True)            <span class="c">  # dərc olunubmu?</span></span><span class="add">    views = models.PositiveIntegerField(default=0)              <span class="c">  # baxış sayı, mənfi ola bilməz</span></span><span class="add">    created_at = models.DateTimeField(auto_now_add=True)        <span class="c">  # yaranma vaxtı avtomatik yazılır</span></span><span class="add"> </span><span class="add">    class Meta:</span><span class="add">        ordering = ["-created_at"]                              <span class="c">  # default sıra: ən yenisi birinci</span></span><span class="add"> </span><span class="add">    def __str__(self):                                          <span class="c">  # admin və shell-də belə görünür</span></span><span class="add">        return self.title</span></pre><p>Sahə-sahə yaz, hər birində dayan. <code>default</code> = “dəyər verilməsə nə yazılsın”. <code>auto_now_add</code> = “yaranan an özü yazılır, sən toxunmursan”.</p><div class="warn"><b>⚠</b> <b>max_length haqqında:</b> Django 5.2 + SQLite-da <code>max_length</code>-siz <code>CharField</code> <b>xəta vermir</b> (yoxlanılıb). Ona görə “sil, xətanı göstər” demosunu <b>etmə</b>. De: “PostgreSQL/MySQL-da limit lazımdır, real layihədə həmişə yazırıq — başlıq 10 000 simvol olmamalıdır.”</div><div class="say"><b>De:</b> “<code>author</code> və <code>category</code> hələlik adi mətndir — <b>bilə-bilə</b> müvəqqəti. Admin-də <code>oyunlr</code> yazsan, heç kim saxlamayacaq. Dərs 10-da düzəldəcəyik.” (slayd 15)</div><div class="say"><b>De:</b> “Sahə adlarına bax: <code>title</code>, <code>author</code>, <code>category</code>, <code>content</code> — <code>data.py</code>-dakı açarların eynisi. Bu təsadüf deyil.”</div></div><div class="step"><h3><span class="n">4</span>makemigrations → migrate<span class="meta">0:40 · slayd 16–19</span></h3><pre class="term">python manage.py makemigrations
+Migrations for 'blog':
+  blog/migrations/0001_initial.py
+    + Create model Post
+
+python manage.py migrate
+Operations to perform:
+  Apply all migrations: admin, auth, blog, contenttypes, sessions
+Running migrations:
+  Applying contenttypes.0001_initial... OK
+  Applying auth.0001_initial... OK
+  ...                                 <span class="c">  # Django-nun öz migration-ları (cəmi 18)</span>
+  Applying blog.0001_initial... OK
+  Applying sessions.0001_initial... OK</pre><p><code>blog/migrations/0001_initial.py</code>-ı aç, 10 saniyə göstər:</p><div class="file">blog/migrations/0001_initial.py  — Django yaratdı, əl ilə dəyişmirik</div><pre style="font-size:6.4pt">class Migration(migrations.Migration):
+
+    initial = True
+
+    dependencies = [
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='Post',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('title', models.CharField(max_length=200)),
+                ('author', models.CharField(max_length=50)),
+                ('category', models.CharField(max_length=50)),
+                ('content', models.TextField()),
+                ('is_published', models.BooleanField(default=True)),
+                ('views', models.PositiveIntegerField(default=0)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+            ],
+            options={
+                'ordering': ['-created_at'],
+            },
+        ),
+    ]</pre><div class="say"><b>De:</b> “Migration = bazanın git commit-i. <code>id</code>-ni biz yazmadıq — Django özü əlavə etdi. Model dəyişdi → iki komanda. Həmişə.”</div><p><code>runserver</code>-dəki “unapplied migrations” qırmızı yazısı artıq yoxdur — göstər.</p></div><div class="step"><h3><span class="n">5</span>createsuperuser<span class="meta">0:50 · slayd 21</span></h3><pre class="term">python manage.py createsuperuser
+Istifadəçi adı (leave blank to use 'radioenerji'): admin
+E-poçt ünvanı:                         <span class="c">  # boş buraxmaq olar</span>
+Password:                              <span class="c">  # yazılır, amma ekranda GÖRÜNMÜR</span>
+Password (again):
+Şifrə çox qısadır. Şifrədə ən az 8 simvol olmalıdır.
+Bu şifrə çox asandır.
+Bu şifrə ancaq rəqəmlərdən ibarətdir.
+Bypass password validation and create user anyway? [y/N]: y
+Superuser created successfully.</pre><div class="say"><b>De:</b> “Parol yazanda ekranda heç nə görünmür — bu normaldır, klaviatura işləyir.”</div><p>Sadə parolda (<code>12345</code>) Django 3 xəbərdarlıq verir → <code>y</code> yazıb keç. Güclü parolda (8+ simvol, hərf+rəqəm) bu sual çıxmır. Mətnlərin bir hissəsi ingiliscədir — normaldır.</p></div><div class="step"><h3><span class="n">6</span>Model-i admin-ə tanıt<span class="meta">0:52 · slayd 21</span></h3><div class="file">blog/admin.py</div><pre>from django.contrib import admin
+
+<span class="del"># Register your models here.</span><span class="add">from .models import Post</span><span class="add"> </span><span class="add">admin.site.register(Post)</span></pre><p><code>/admin/</code> → daxil ol → <b>Posts</b> → “Əlavə et” formasını aç: forma, yoxlama, hamısı hazır.</p><div class="warn"><b>⚠</b> Formu <b>göstər, amma SAXLAMA</b>. İlk post <code>id=1</code>-i tutsa, <code>data.py</code>-dan köçürəcəyimiz postlar 2–6 olacaq, hələ <code>data.py</code>-dan oxuyan kateqoriya/müəllif səhifələrindəki linklər isə <b>səhv postlara</b> aparacaq.</div></div><div class="step"><h3><span class="n">7</span>PostAdmin — siyahını gözəlləşdir<span class="meta">0:55 · slayd 22</span></h3><div class="file">blog/admin.py</div><pre>from django.contrib import admin
+
+from .models import Post
+
+<span class="del">admin.site.register(Post)</span><span class="add"> </span><span class="add"><span class="c"># [DƏRS 9] müəllim yazır</span></span><span class="add">@admin.register(Post)</span><span class="add">class PostAdmin(admin.ModelAdmin):</span><span class="add">    list_display = ["title", "author", "category", "is_published", "views", "created_at"]</span><span class="add">    list_filter = ["is_published", "category"]                  <span class="c">  # sağda filtr paneli</span></span><span class="add">    search_fields = ["title", "content"]                        <span class="c">  # yuxarıda axtarış qutusu</span></span></pre><div class="say"><b>De:</b> “Dərs 4 — <code>PostAdmin</code> <code>ModelAdmin</code>-dən törəyir, biz yalnız 3 atributu override edirik. <code>@admin.register</code> — Dərs 2-dəki decorator.”</div><div class="warn"><b>⚠</b> <code>admin.site.register(Post)</code> sətrini silməyi unudan olacaq → <code>AlreadyRegistered: The model Post is already registered with 'blog.PostAdmin'.</code></div><p>Bu dərsdə <code>is_featured</code>, <code>list_editable</code>, <code>actions</code> <b>yazmırsan</b> — ev tapşırığıdır.</p></div><div class="step"><h3><span class="n">8</span>shell — data.py-ı bazaya köçür<span class="meta">1:00 · slayd 24</span></h3><p>Slayd 24-ü aç. Shell-də <b>ilk iş</b> — <code>data.py</code>-dakı 5 postu bir dövrlə bazaya yazırıq. <code>create()</code>-i bir cümlə ilə de (“obyekt yarat və bazaya yaz”), təfsilatı növbəti slayddadır:</p><pre class="term" style="font-size:6.9pt">python manage.py shell
+&gt;&gt;&gt; from blog.models import Post
+&gt;&gt;&gt; from blog.data import POSTS
+&gt;&gt;&gt; for p in POSTS:
+...     Post.objects.create(title=p["title"], author=p["author"], category=p["category"], content=p["content"])
+...
+&gt;&gt;&gt; Post.objects.count()
+5</pre><div class="say"><b>De:</b> “Dərs 1-dəki <code>list[dict]</code> → dövr → hər dict bir sətir oldu. <code>created_at</code> vermədik — <code>auto_now_add</code> onsuz da qəbul etmir, hamısı indiki vaxtı aldı.”</div><div class="check"><b>Yoxla:</b> Admin-də 5 post. <code>id</code>-lər 1–5 — <code>data.py</code>-dakı ilə eyni. Bu vacibdir: bu gün kateqoriya və ev səhifələri hələ <code>data.py</code>-dan oxuyur və <code>/post/1/</code>…<code>/post/5/</code> linkləri verir.</div><div class="warn"><b>⚠</b> Tələbədə id-lər qarışıbsa (importdan əvvəl admin-də post yaradıb): <code>db.sqlite3</code>-ü sil → <code>migrate</code> → <code>createsuperuser</code> → import. 1 dəqiqəlik işdir.</div></div><div class="step"><h3><span class="n">9</span>create() — tək obyekt<span class="meta">1:03 · slayd 25</span></h3><pre class="term">&gt;&gt;&gt; Post.objects.create(title="Test", author="ali", category="oyunlar", content="Salam")
+&lt;Post: Test&gt;                              <span class="c">  # __str__ işlədi</span>
+&gt;&gt;&gt; Post.objects.count()
+6</pre><div class="say"><b>De:</b> “<code>views</code>, <code>is_published</code>, <code>created_at</code> yazmadıq — default işlədi. <code>Post.objects</code> — manager, bütün sorğular ondan başlayır.”</div><p>Bu Test postu <code>id=6</code> aldı — slayd 28-də onu silirik.</p></div><div class="step"><h3><span class="n">10</span>Oxumaq — QuerySet<span class="meta">1:05 · slayd 26</span></h3><pre class="term" style="font-size:6.4pt">&gt;&gt;&gt; Post.objects.all()
+&lt;QuerySet [&lt;Post: Test&gt;, &lt;Post: FIFA-da ən yaxşı taktika&gt;, &lt;Post: Harri Potter kitablarını hansı ardıcıllıqla oxumalı?&gt;, &lt;Post: Git nədir və niyə lazımdır?&gt;, &lt;Post: Minecraft-da redstone ilə kalkulyator&gt;, &lt;Post: Python-da ilk addım&gt;]&gt;
+&gt;&gt;&gt; Post.objects.filter(author="nigar")
+&lt;QuerySet [&lt;Post: Git nədir və niyə lazımdır?&gt;, &lt;Post: Python-da ilk addım&gt;]&gt;
+&gt;&gt;&gt; Post.objects.filter(author="nigar").count()
+2
+&gt;&gt;&gt; Post.objects.exclude(category="oyunlar")
+&lt;QuerySet [&lt;Post: Harri Potter kitablarını hansı ardıcıllıqla oxumalı?&gt;, &lt;Post: Git nədir və niyə lazımdır?&gt;, &lt;Post: Python-da ilk addım&gt;]&gt;
+&gt;&gt;&gt; Post.objects.all()[:3]
+&lt;QuerySet [&lt;Post: Test&gt;, &lt;Post: FIFA-da ən yaxşı taktika&gt;, &lt;Post: Harri Potter kitablarını hansı ardıcıllıqla oxumalı?&gt;]&gt;</pre><div class="say"><b>De:</b> “Sıra niyə tərsdir? <code>Meta.ordering = ["-created_at"]</code> — ən yenisi birinci. Test ən son yarandı.”</div></div><div class="step"><h3><span class="n">11</span>get() və filter() — fərq<span class="meta">1:08 · slayd 27</span></h3><pre class="term">&gt;&gt;&gt; post = Post.objects.get(id=1)
+&gt;&gt;&gt; post.title
+'Python-da ilk addım'
+&gt;&gt;&gt; Post.objects.get(id=999)
+blog.models.Post.DoesNotExist: Post matching query does not exist.
+&gt;&gt;&gt; Post.objects.get(author="nigar")
+blog.models.Post.MultipleObjectsReturned: get() returned more than one Post -- it returned 2!
+&gt;&gt;&gt; Post.objects.filter(id=1).title
+AttributeError: 'QuerySet' object has no attribute 'title'</pre><div class="say"><b>De:</b> “<code>get()</code> — yalnız unikal sahə ilə (<code>id</code>, <code>slug</code>). Qalan hər şey — <code>filter()</code>.”</div></div><div class="step"><h3><span class="n">12</span>Dəyişmək və silmək<span class="meta">1:10 · slayd 28</span></h3><pre class="term">&gt;&gt;&gt; post = Post.objects.get(id=1)
+&gt;&gt;&gt; post.title = "Python-da ilk 10 addım"
+&gt;&gt;&gt; post.save()                           <span class="c">  # admin-də yenilə — dəyişdi</span>
+&gt;&gt;&gt; post = Post.objects.get(id=6)
+&gt;&gt;&gt; post.delete()
+(1, {'blog.Post': 1})
+&gt;&gt;&gt; Post.objects.count()
+5</pre><p><code>save()</code>-siz variantı da göstər: başlığı dəyiş, <code>save()</code> yazma → admin-də köhnə başlıq.</p><div class="warn"><b>⚠</b> Başlığı geri qaytar (<code>post.title = "Python-da ilk addım"</code> + <code>save()</code>) — ya da admin-də düzəlt.</div></div><div class="step"><h3><span class="n">13</span>Mikro-tapşırıq — shell-də 5 sorğu<span class="meta">1:12 · slayd 29</span></h3><p>Tələbələr öz shell-ində yazır (5 dəq). Cavablar səndə:</p><pre class="term">&gt;&gt;&gt; Post.objects.filter(author="murad").count()
+2
+&gt;&gt;&gt; Post.objects.get(title="Git nədir və niyə lazımdır?").author
+'nigar'
+&gt;&gt;&gt; Post.objects.exclude(category="oyunlar")          <span class="c">  # 3 post</span>
+&gt;&gt;&gt; Post.objects.order_by("created_at").first()
+&lt;Post: Python-da ilk addım&gt;
+&gt;&gt;&gt; post = Post.objects.get(id=2)
+&gt;&gt;&gt; post.views = 100
+&gt;&gt;&gt; post.save()                                        <span class="c">  # admin-də “views” sütununda 100</span></pre></div><div class="step"><h3><span class="n">14</span>View-lar bazadan oxuyur<span class="meta">1:15 · slayd 30–32</span></h3><div class="file">blog/views.py  (yalnız post_list və post_detail)</div><pre>from django.http import Http404
+<span class="del">from django.shortcuts import render</span><span class="add">from django.shortcuts import render, get_object_or_404</span>
+<span class="del">from .data import POSTS, CATEGORIES</span><span class="add">from .data import POSTS, CATEGORIES                <span class="c">  # hələ lazımdır: kateqoriya və ev view-ları</span></span><span class="add">from .models import Post</span>...
+
+def post_list(request):
+<span class="del">    context = {"posts": POSTS}                       # context = adi dict</span><span class="del">    return render(request, "blog/post_list.html", context)</span><span class="add">    posts = Post.objects.filter(is_published=True)      <span class="c">  # SELECT ... WHERE is_published</span></span><span class="add">    return render(request, "blog/post_list.html", {"posts": posts})</span>
+
+def post_detail(request, post_id):
+<span class="del">    for post in POSTS:</span><span class="del">        if post["id"] == post_id:</span><span class="del">            return render(request, "blog/post_detail.html", {"post": post})</span><span class="del">    raise Http404("Belə post yoxdur")</span><span class="add">    post = get_object_or_404(Post, id=post_id, is_published=True) <span class="c">  # tapmasa → 404</span></span><span class="add">    return render(request, "blog/post_detail.html", {"post": post})</span></pre><p><b>Demo sırası:</b> əvvəlcə <code>post = Post.objects.get(id=post_id)</code> yaz → <code>/post/99/</code> → 500 (<code>DoesNotExist</code>). Sonra <code>get_object_or_404</code> → 404. Slayd 31: “Dərs 7-dəki 4 sətirlik dövr — bir sətir.”</p><p>Sonra admin-də bir postun “is published” işarəsini götür → ana səhifədən itdi. <code>/post/&lt;id&gt;/</code> ilə aç → 404. “Filtr detalda da lazımdır” (slayd 32). İşarəni geri qoy.</p><div class="warn"><b>⚠</b> <code>from django.http import Http404</code> və <code>data.py</code> importu <b>qalır</b> — <code>category_detail</code>, <code>author_posts</code>, <code>latest</code>, <code>stats</code> hələ <code>data.py</code>-dan oxuyur. Onları tələbə praktikada və evdə köçürəcək.</div></div><div class="step"><h3><span class="n">15</span>Template-lərə toxunmuruq<span class="meta">1:20 · slayd 33–34</span></h3><p>Ana səhifəni, post səhifəsini aç — sayt <b>eyni</b> görünür. Template-lərdə bir hərf də dəyişmədi.</p><div class="say"><b>De:</b> “Məlumatın mənbəyi dəyişdi — siyahıdan bazaya. Görünüş xəbər tutmadı. MVT budur. Dərs 7-də dict açarlarını model sahələri kimi adlandırmağımızın səbəbi də bu idi.”</div><p>Tarix indi <code>datetime</code>-dır (bu günün tarixi) — <code>|date:"d.m.Y"</code> eyni işləyir.</p><p>Slayd 34 (xətalar) — istəsən <code>no such table</code>-ı göstər: <code>db.sqlite3</code>-ün surətini çıxar, sil, səhifəni aç → <code>OperationalError: no such table: blog_post</code>. Faylı geri qoy.</p></div><div class="step"><h3><span class="n">16</span>Git<span class="meta">1:25</span></h3><pre class="term">git add .
+git status          <span class="c">  # db.sqlite3 SİYAHIDA OLMAMALIDIR (.gitignore)</span>
+git commit -m "Dərs 9: Post modeli, admin, view-lar bazadan"
+git push</pre><div class="say"><b>De:</b> “Migration faylları GitHub-a <b>gedir</b>, baza (<code>db.sqlite3</code>) <b>getmir</b>. Dostun clone edib <code>migrate</code> edəcək — cədvəllər onda da yaranacaq, amma boş olacaq.”</div></div><div class="step long"><h3><span class="n">17</span>I hissənin sonunda fayllar belə olmalıdır<span class="meta">yoxlama</span></h3><div class="file">blog/models.py</div><pre style="font-size:6.4pt">from django.db import models
+
+<span class="c"># Model = cədvəl, obyekt = sətir, sahə = sütun.</span>
+<span class="c"># Model dəyişəndən sonra HƏMİŞƏ:  makemigrations  →  migrate</span>
+
+
+<span class="c"># [DƏRS 9] müəllim yazır</span>
+class Post(models.Model):
+    title = models.CharField(max_length=200)                    <span class="c">  # qısa mətn — max_length = maksimum simvol sayı</span>
+    author = models.CharField(max_length=50)                    <span class="c">  # hələlik ad; Dərs 12-də User olacaq</span>
+    category = models.CharField(max_length=50)                  <span class="c">  # hələlik slug; Dərs 10-da ForeignKey olacaq</span>
+    content = models.TextField()                                <span class="c">  # uzun mətn — limitsiz</span>
+    is_published = models.BooleanField(default=True)            <span class="c">  # dərc olunubmu?</span>
+    views = models.PositiveIntegerField(default=0)              <span class="c">  # baxış sayı, mənfi ola bilməz</span>
+    created_at = models.DateTimeField(auto_now_add=True)        <span class="c">  # yaranma vaxtı avtomatik yazılır</span>
+
+    class Meta:
+        ordering = ["-created_at"]                              <span class="c">  # default sıra: ən yenisi birinci</span>
+
+    def __str__(self):                                          <span class="c">  # admin və shell-də belə görünür</span>
+        return self.title</pre><div class="file">blog/admin.py</div><pre>from django.contrib import admin
+
+from .models import Post
+
+
+<span class="c"># [DƏRS 9] müəllim yazır</span>
+@admin.register(Post)
+class PostAdmin(admin.ModelAdmin):
+    list_display = ["title", "author", "category", "is_published", "views", "created_at"]
+    list_filter = ["is_published", "category"]                  <span class="c">  # sağda filtr paneli</span>
+    search_fields = ["title", "content"]                        <span class="c">  # yuxarıda axtarış qutusu</span></pre><div class="file">blog/views.py  (üst hissə)</div><pre style="font-size:6.9pt">from django.http import Http404
+from django.shortcuts import render, get_object_or_404
+
+from .data import POSTS, CATEGORIES                <span class="c">  # hələ lazımdır: kateqoriya və ev view-ları</span>
+from .models import Post
+
+...
+
+def post_list(request):
+    posts = Post.objects.filter(is_published=True)      <span class="c">  # SELECT ... WHERE is_published</span>
+    return render(request, "blog/post_list.html", {"posts": posts})
+
+
+def post_detail(request, post_id):
+    post = get_object_or_404(Post, id=post_id, is_published=True) <span class="c">  # tapmasa → 404</span>
+    return render(request, "blog/post_detail.html", {"post": post})
+
+<span class="c"># about, category_list, category_detail, contact, author_posts, latest, stats — DƏYİŞMƏYİB (data.py-dan)</span></pre><div class="check"><b>Yoxla:</b> <code>blog/migrations/</code>-da yalnız <code>0001_initial.py</code>. Sayt işləyir: <code>/</code> 5 kart, <code>/post/3/</code> “Git…”, <code>/category/oyunlar/</code> (hələ data.py) → linklər <code>/post/2/</code>, <code>/post/5/</code> düzgün postlara aparır.</div></div><h2 class="part">II hissə · Praktika — tələbə kateqoriyaları bazaya köçürür (1:40 – 2:50)</h2><p>Yeni heç nə izah etmirsən. Tələbəyə de: “<code>Post</code> üçün nə etdiksə, eynisi. Öz <code>models.py</code> və <code>admin.py</code>-na bax.” Hər blokun sonunda 2 dəqiqəlik checkpoint.</p><table>
+<tr><th style="width:15%">Blok</th><th style="width:47%">Tələbə nə edir</th><th>Checkpoint — ekranda yoxla</th></tr>
+<tr><td><b>A</b> · 22 dəq<br>slayd 37</td><td><code>Category</code> modeli (<code>name</code>, <code>slug</code> unique, <code>description</code> blank) + <code>Meta</code> + <code>__str__</code> + <code>makemigrations</code> / <code>migrate</code></td><td><code>0002_category.py</code> yarandı, <code>migrate</code> OK</td></tr>
+<tr><td><b>B</b> · 22 dəq<br>slayd 38</td><td><code>CategoryAdmin</code> (<code>list_display</code>, <code>prepopulated_fields</code>) + shell-də <code>CATEGORIES</code> import</td><td>admin-də “Categories”, 3 kateqoriya adı ilə; yenisini yazanda slug özü dolur</td></tr>
+<tr><td><b>C</b> · 22 dəq<br>slayd 39</td><td><code>category_list</code> / <code>category_detail</code> ORM ilə + <code>get_object_or_404</code> + push</td><td><code>/category/oyunlar/</code> 2 kart · <code>/category/futbol/</code> 404</td></tr>
+</table><div class="step long"><h3><span class="n">18</span>Praktikanın həlli — yoxlamaq üçün<span class="meta">tələbəyə göstərmə</span></h3><div class="file">blog/models.py  (Post-un altına)</div><pre style="font-size:6.9pt"><span class="c"># [PRAKTİKA 9] tələbə yazır</span>
+class Category(models.Model):
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True)                        <span class="c">  # URL-də işlənir, təkrarlana bilməz</span>
+    description = models.TextField(blank=True)                  <span class="c">  # blank=True → formda boş qala bilər</span>
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name_plural = "Categories"                      <span class="c">  # admində "Categorys" yazılmasın</span>
+
+    def __str__(self):
+        return self.name</pre><pre class="term">python manage.py makemigrations
+Migrations for 'blog':
+  blog/migrations/0002_category.py
+    + Create model Category
+python manage.py migrate</pre><div class="file">blog/admin.py</div><pre><span class="del">from .models import Post</span><span class="add">from .models import Post, Category</span>...
+
+<span class="c"># [PRAKTİKA 9] tələbə yazır</span>
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ["name", "slug"]
+    prepopulated_fields = {"slug": ["name"]}                    <span class="c">  # ad yazdıqca slug özü dolur</span></pre><pre class="term">&gt;&gt;&gt; from blog.models import Category
+&gt;&gt;&gt; from blog.data import CATEGORIES
+&gt;&gt;&gt; for c in CATEGORIES:
+...     Category.objects.create(name=c["name"], slug=c["slug"], description=c["description"])
+...
+&gt;&gt;&gt; Category.objects.count()
+3</pre><div class="file">blog/views.py</div><pre style="font-size:6.9pt"><span class="del">from .models import Post</span><span class="add">from .models import Post, Category</span>...
+
+<span class="c"># ───────────────────────── [PRAKTİKA 9] ─────────────────────────</span>
+
+def category_list(request):
+    categories = Category.objects.all()
+    return render(request, "blog/category_list.html", {"categories": categories})
+
+
+def category_detail(request, slug):
+    category = get_object_or_404(Category, slug=slug)
+    posts = Post.objects.filter(category=slug, is_published=True) <span class="c">  # Dərs 10-da bu sətir sadələşəcək</span>
+    context = {"category": category, "posts": posts}
+    return render(request, "blog/category_detail.html", context)</pre></div><table>
+<tr><th style="width:44%">Praktikada görəcəyin xəta</th><th>Səbəb</th></tr>
+<tr><td><code>no such table: blog_category</code></td><td><code>makemigrations</code> + <code>migrate</code> edilməyib</td></tr>
+<tr><td><code>No changes detected</code></td><td><code>models.py</code> yadda saxlanmayıb</td></tr>
+<tr><td><code>UNIQUE constraint failed: blog_category.slug</code></td><td>shell importu iki dəfə işlədilib → <code>Category.objects.all().delete()</code>, yenidən</td></tr>
+<tr><td>Admin-də <code>Categorys</code></td><td><code>verbose_name_plural</code> yazılmayıb</td></tr>
+<tr><td>Admin-də <code>Category object (1)</code></td><td><code>__str__</code> yoxdur</td></tr>
+<tr><td>Admin-də <code>Category</code> görünmür</td><td><code>@admin.register</code> yoxdur və ya <code>from .models import Category</code> unudulub</td></tr>
+<tr><td><code>NameError: name 'Category' is not defined</code></td><td><code>views.py</code>-da import yenilənməyib</td></tr>
+<tr><td><code>Category matching query does not exist</code> (500)</td><td>view-da <code>get()</code> — <code>get_object_or_404</code> işlət</td></tr>
+<tr><td><code>/category/oyunlar/</code> boşdur</td><td><code>filter(category=category)</code> — obyekt verilib, slug lazımdır: <code>category=slug</code></td></tr>
+</table><h2 class="part">Son 10 dəqiqə (2:50 – 3:00)</h2><div class="step"><h3><span class="n">19</span>Yekun və ev tapşırığı<span class="meta">slayd 40</span></h3><p>Slayd 40-ı birlikdə oxu, <code>hw-09.pdf</code>-i payla. Push: <code>git add . → git commit -m "Dərs 9: praktika" → git push</code>.</p><p><b>Dərs 10-a körpü:</b> admin-də bir postun kateqoriyasını <code>oyunlr</code> yaz → kartdakı link <code>/category/oyunlr/</code> → 404. Soruş: “Kateqoriyanın adını dəyişsək, postlarda nə olacaq?” → Dərs 10: <code>ForeignKey</code>.</p></div><div class="step long"><h3><span class="n">20</span>Ev tapşırığının həlli<span class="meta">yoxlamaq üçün</span></h3><p>Tam həll bu qovluqdadır — <code>[EV 9]</code> nişanlı hissələr. Əsas parçalar:</p><div class="file">blog/views.py</div><pre><span class="c"># tapşırıq 1 — post_detail-də, render-dən əvvəl</span>
+post.views += 1
+post.save()
+
+<span class="c"># tapşırıq 2</span>
+posts = Post.objects.filter(author=name, is_published=True)
+
+<span class="c"># tapşırıq 3</span>
+posts = Post.objects.filter(is_published=True).order_by("-created_at")[:3]
+
+<span class="c"># tapşırıq 4 — stats</span>
+published = Post.objects.filter(is_published=True)
+context = {
+    "post_count": published.count(),                        <span class="c">  # SELECT COUNT(*) — siyahını yükləmir</span>
+    "category_count": Category.objects.count(),
+    "top_post": published.order_by("-views").first(),       <span class="c">  # ən çox baxılan; yoxdursa None</span>
+}</pre><div class="file">blog/models.py  (Post, created_at-dan sonra)</div><pre><span class="c">    # [EV 9] tapşırıq 5 — yeni sahə → yeni migration</span>
+    is_featured = models.BooleanField(default=False)</pre><pre class="term">python manage.py makemigrations
+Migrations for 'blog':
+  blog/migrations/0003_post_is_featured.py
+    + Add field is_featured to post</pre><div class="file">blog/admin.py  — tapşırıq 6</div><pre>    list_display = ["title", "author", "category", "is_published", "is_featured", "views"]
+    list_filter = ["is_published", "is_featured", "category"]
+    list_editable = ["is_published", "is_featured"]</pre><div class="warn"><b>⚠</b> <code>list_editable</code>-dakı sahə <code>list_display</code>-də yoxdursa: <code>(admin.E122) The value of 'list_editable[1]' refers to 'is_featured', which is not contained in 'list_display'.</code></div><p>Tapşırıq 7: <code>blog/data.py</code> silinir, <code>views.py</code>-dan <code>data</code> importu və <code>Http404</code> çıxır. Yoxlama: bütün səhifələr açılır, <code>ImportError</code> yoxdur. Migration tarixçəsi: <code>0001_initial</code> → <code>0002_category</code> → <code>0003_post_is_featured</code>.</p></div>
+<div class="foot"><span>STEP IT Academy · Python Web Development · project/django/lesson-09/ADDIMLAR.pdf</span><span>by <b>TheHormat</b></span></div>
+</body></html>
